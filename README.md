@@ -35,9 +35,10 @@ Requirements: Node.js 20.19+ and npm.
    ```powershell
    $token = node -p "require('node:crypto').randomBytes(32).toString('base64url')"
    Set-Content -Path .dev.vars -Value "ADMIN_BOOTSTRAP_TOKEN=$token"
+   Set-Clipboard -Value $token
    ```
 
-   `.dev.vars` is ignored by Git. Never publish or commit the token.
+   `.dev.vars` is ignored by Git. Paste the token into the first-run setup form, then clear it with `$token = $null; Set-Clipboard -Value ""`. Never publish or commit the token.
 
 3. Apply the local database migrations, then run the app:
 
@@ -108,9 +109,24 @@ This project is structured for Cloudflare Workers + D1. Deployment requires acce
 
 1. Authenticate with Cloudflare: `npx wrangler login`.
 2. Create the production D1 database: `npx wrangler d1 create skyleax-task-09`.
-3. Replace the `database_id` placeholder in `wrangler.jsonc` with the ID returned by Cloudflare.
+3. This project’s `wrangler.jsonc` is already configured with its production database ID. For a separate copy or environment, replace it with that database’s ID.
 4. Apply migrations with `npx wrangler d1 migrations apply skyleax-task-09 --remote`.
-5. Set the one-time setup secret with `npx wrangler secret put ADMIN_BOOTSTRAP_TOKEN`.
-6. Deploy with `npm run deploy`, then open the deployed URL, complete setup, sign in, and verify the API and dashboard.
+5. Deploy the application:
 
-Cloudflare will issue a `workers.dev` URL after the first successful deployment. This workspace has not been granted Cloudflare account authorization, so it cannot create the remote D1 database, upload the production secret, or claim a live URL until you authorize those actions.
+   ```sh
+   npm run deploy
+   ```
+
+   This publishes the dashboard; first-admin setup remains disabled until its secret is configured.
+
+6. Generate and set a one-time bootstrap secret in PowerShell:
+
+   ```powershell
+   $token = node -p "require('node:crypto').randomBytes(32).toString('base64url')"
+   Set-Clipboard -Value $token
+   npx wrangler secret put ADMIN_BOOTSTRAP_TOKEN
+   ```
+
+   Paste the secret from the clipboard when Wrangler prompts. Open the deployed site, refresh it, and paste the same token into the setup form. Choose your own administrator password (at least 12 characters). The account is not created until you complete that form. Then clear `$token` and the clipboard; optionally remove the one-time Worker secret with `npx wrangler secret delete ADMIN_BOOTSTRAP_TOKEN`.
+
+The deployed application is available at the `workers.dev` URL printed by Wrangler. Until you set the bootstrap secret and complete the setup form, no administrator account exists and protected dashboard APIs correctly reject requests.

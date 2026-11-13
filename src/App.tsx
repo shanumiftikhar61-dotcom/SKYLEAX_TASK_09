@@ -104,6 +104,7 @@ function App() {
   const [userList, setUserList] = useState<UserList>({ records: [], page: 1, pageSize: 10, total: 0, totalPages: 0 });
   const [activityList, setActivityList] = useState<Activity[]>([]);
   const [busy, setBusy] = useState(false);
+  const [recordsLoading, setRecordsLoading] = useState(false);
   const [pageError, setPageError] = useState("");
   const [notice, setNotice] = useState<Notice | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -178,6 +179,7 @@ function App() {
       if (activeFilter !== "all") params.set("active", activeFilter);
       if (fromDate) params.set("from", fromDate);
       if (toDate) params.set("to", toDate);
+      setRecordsLoading(true);
       api<UserList>(`/api/users?${params}`, { signal: controller.signal })
         .then((result) => {
           setUserList(result);
@@ -185,11 +187,15 @@ function App() {
         })
         .catch((error: unknown) => {
           if (!controller.signal.aborted) setPageError(friendlyError(error));
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setRecordsLoading(false);
         });
     }, search ? 220 : 0);
     return () => {
       window.clearTimeout(timer);
       controller.abort();
+      setRecordsLoading(false);
     };
   }, [admin, view, search, roleFilter, statusFilter, activeFilter, fromDate, toDate, sortField, sortDirection, currentPage, pageSize]);
 
@@ -487,8 +493,9 @@ function App() {
                 <span className="date-separator">and</span>
                 <input type="date" aria-label="Created to date" value={toDate} min={fromDate || undefined} onChange={(event) => changeFilter(setToDate, event.target.value)} />
                 {filtered && <button className="text-button clear-filter" onClick={clearFilters}>Clear filters</button>}
-                <span className="result-count">{userList.total.toLocaleString()} {userList.total === 1 ? "record" : "records"}</span>
+                <span className="result-count">{recordsLoading ? "Updating…" : `${userList.total.toLocaleString()} ${userList.total === 1 ? "record" : "records"}`}</span>
               </div>
+              {recordsLoading && <div className="records-loading" role="status"><LoaderCircle size={14} className="spin" /> Updating records…</div>}
               <UserTable
                 records={userList.records}
                 sortField={sortField}

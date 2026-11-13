@@ -172,6 +172,7 @@ describe("user records, filters, sorting, and pagination", () => {
       { name: "Zoe Avery", email: "zoe@example.com", role: "manager", status: "active" },
       { name: "Ada Lovelace", email: "ada@example.com", role: "manager", status: "active" },
       { name: "Sam Viewer", email: "sam@example.com", role: "viewer", status: "inactive" },
+      { name: "Mina Pending", email: "mina@example.com", role: "editor", status: "pending" },
     ];
     const ids: string[] = [];
     for (const record of records) {
@@ -203,6 +204,27 @@ describe("user records, filters, sorting, and pagination", () => {
 
     const byId = await request(`/api/users?search=${ids[0]}`, { cookie: sessionCookie });
     expect((await byId.json() as { total: number }).total).toBe(1);
+
+    const byName = await request("/api/users?search=Lovelace", { cookie: sessionCookie });
+    expect((await byName.json() as { records: { id: string }[] }).records[0].id).toBe(ids[1]);
+
+    const emailDescending = await request(
+      "/api/users?role=manager&sort=email&direction=desc",
+      { cookie: sessionCookie },
+    );
+    expect((await emailDescending.json() as { records: { name: string }[] }).records[0].name).toBe("Zoe Avery");
+
+    const createdAscending = await request(
+      "/api/users?role=manager&sort=createdAt&direction=asc",
+      { cookie: sessionCookie },
+    );
+    expect((await createdAscending.json() as { records: { name: string }[] }).records[0].name).toBe("Zoe Avery");
+
+    const roleAscending = await request("/api/users?sort=role&direction=asc", { cookie: sessionCookie });
+    expect((await roleAscending.json() as { records: { role: string }[] }).records[0].role).toBe("admin");
+
+    const statusDescending = await request("/api/users?sort=status&direction=desc", { cookie: sessionCookie });
+    expect((await statusDescending.json() as { records: { status: string }[] }).records[0].status).toBe("pending");
 
     const invalid = await request("/api/users?sort=unknown", { cookie: sessionCookie });
     expect(invalid.status).toBe(400);

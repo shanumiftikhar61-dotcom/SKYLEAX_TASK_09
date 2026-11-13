@@ -1,6 +1,7 @@
 import { env, exports as workerExports } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import migration from "../migrations/0001_initial_schema.sql?raw";
+import { createInitialAdmin } from "../src/worker/auth";
 
 const ADMIN_EMAIL = "shanumiftikhar61@gmail.com";
 const ADMIN_PASSWORD = `${crypto.randomUUID()}-AdminA9`;
@@ -95,6 +96,33 @@ describe("admin authentication and protected endpoints", () => {
       },
     });
     expect(wrongToken.status).toBe(403);
+
+    const whitespaceToken = await request("/api/auth/setup", {
+      method: "POST",
+      body: {
+        email: ADMIN_EMAIL,
+        bootstrapToken: ` \r\n${ADMIN_BOOTSTRAP_TOKEN}\t `,
+        password: ADMIN_PASSWORD,
+      },
+    });
+    expect(whitespaceToken.status).toBe(409);
+
+    const paddedSecretContext = {
+      env: {
+        DB: env.DB,
+        ASSETS: env.ASSETS,
+        ADMIN_EMAIL,
+        ADMIN_BOOTSTRAP_TOKEN: ` \r\n${ADMIN_BOOTSTRAP_TOKEN}\t `,
+      },
+      request: new Request(`${BASE_URL}/api/auth/setup`),
+      url: new URL(`${BASE_URL}/api/auth/setup`),
+    };
+    const paddedSecret = await createInitialAdmin(paddedSecretContext, {
+      email: ADMIN_EMAIL,
+      bootstrapToken: ADMIN_BOOTSTRAP_TOKEN,
+      password: ADMIN_PASSWORD,
+    });
+    expect(paddedSecret.status).toBe(409);
 
     const anotherSetup = await request("/api/auth/setup", {
       method: "POST",

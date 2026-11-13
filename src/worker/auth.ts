@@ -132,7 +132,8 @@ export async function createInitialAdmin(
   body: Record<string, unknown> | null,
 ): Promise<Response> {
   const { env } = ctx;
-  if (!env.ADMIN_BOOTSTRAP_TOKEN) {
+  const configuredToken = env.ADMIN_BOOTSTRAP_TOKEN?.trim();
+  if (!configuredToken) {
     return errorResponse("Admin setup is not configured. Add ADMIN_BOOTSTRAP_TOKEN to the server environment.", 503);
   }
   if (!body || typeof body.bootstrapToken !== "string" || typeof body.password !== "string") {
@@ -145,8 +146,8 @@ export async function createInitialAdmin(
     return errorResponse("The setup email does not match the authorized administrator.", 403);
   }
 
-  const supplied = await digest(body.bootstrapToken);
-  const expected = await digest(env.ADMIN_BOOTSTRAP_TOKEN);
+  const supplied = await digest(body.bootstrapToken.trim());
+  const expected = await digest(configuredToken);
   if (!constantTimeEqual(supplied, expected)) {
     return errorResponse("The setup token is not valid.", 403);
   }

@@ -27,7 +27,7 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
       ]);
       return json({
         setupRequired: (count?.count ?? 0) === 0,
-        setupReady: Boolean(env.ADMIN_BOOTSTRAP_TOKEN && env.ADMIN_EMAIL),
+        setupReady: Boolean(env.ADMIN_BOOTSTRAP_TOKEN?.trim() && env.ADMIN_EMAIL?.trim()),
         authenticated: Boolean(admin),
       });
     }

@@ -3,9 +3,14 @@ import { beforeEach, describe, expect, it } from "vitest";
 import migration from "../migrations/0001_initial_schema.sql?raw";
 
 const ADMIN_EMAIL = "shanumiftikhar61@gmail.com";
-const ADMIN_PASSWORD = "correct horse battery staple";
+const ADMIN_PASSWORD = `${crypto.randomUUID()}-AdminA9`;
+const ADMIN_BOOTSTRAP_TOKEN = env.ADMIN_BOOTSTRAP_TOKEN;
 const BASE_URL = "http://example.com";
 let sessionCookie = "";
+
+if (!ADMIN_BOOTSTRAP_TOKEN) {
+  throw new Error("The integration test bootstrap secret must be configured.");
+}
 
 async function request(
   path: string,
@@ -49,7 +54,7 @@ beforeEach(async () => {
     body: {
       email: ADMIN_EMAIL,
       name: "Shanum Iftikhar",
-      bootstrapToken: "test-bootstrap-secret",
+      bootstrapToken: ADMIN_BOOTSTRAP_TOKEN,
       password: ADMIN_PASSWORD,
     },
   });
@@ -75,7 +80,7 @@ describe("admin authentication and protected endpoints", () => {
       method: "POST",
       body: {
         email: "someone-else@example.com",
-        bootstrapToken: "test-bootstrap-secret",
+        bootstrapToken: ADMIN_BOOTSTRAP_TOKEN,
         password: ADMIN_PASSWORD,
       },
     });
@@ -95,7 +100,7 @@ describe("admin authentication and protected endpoints", () => {
       method: "POST",
       body: {
         email: ADMIN_EMAIL,
-        bootstrapToken: "test-bootstrap-secret",
+        bootstrapToken: ADMIN_BOOTSTRAP_TOKEN,
         password: ADMIN_PASSWORD,
       },
     });

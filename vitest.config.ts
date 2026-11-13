@@ -1,5 +1,8 @@
+import { randomBytes } from "node:crypto";
 import { cloudflareTest } from "@cloudflare/vitest-plugin";
 import { defineConfig } from "vitest/config";
+
+const testBootstrapToken = randomBytes(32).toString("base64url");
 
 export default defineConfig({
   plugins: [
@@ -8,7 +11,7 @@ export default defineConfig({
       miniflare: {
         bindings: {
           ADMIN_EMAIL: "shanumiftikhar61@gmail.com",
-          ADMIN_BOOTSTRAP_TOKEN: "test-bootstrap-secret",
+          ADMIN_BOOTSTRAP_TOKEN: testBootstrapToken,
         },
       },
     }),

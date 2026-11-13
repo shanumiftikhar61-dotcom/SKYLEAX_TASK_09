@@ -71,6 +71,26 @@ describe("admin authentication and protected endpoints", () => {
     const status = await request("/api/auth/status", { cookie: sessionCookie });
     expect(await status.json()).toEqual({ setupRequired: false, setupReady: true, authenticated: true });
 
+    const wrongEmail = await request("/api/auth/setup", {
+      method: "POST",
+      body: {
+        email: "someone-else@example.com",
+        bootstrapToken: "test-bootstrap-secret",
+        password: ADMIN_PASSWORD,
+      },
+    });
+    expect(wrongEmail.status).toBe(403);
+
+    const wrongToken = await request("/api/auth/setup", {
+      method: "POST",
+      body: {
+        email: ADMIN_EMAIL,
+        bootstrapToken: "incorrect-token",
+        password: ADMIN_PASSWORD,
+      },
+    });
+    expect(wrongToken.status).toBe(403);
+
     const anotherSetup = await request("/api/auth/setup", {
       method: "POST",
       body: {
@@ -150,10 +170,33 @@ describe("user records, filters, sorting, and pagination", () => {
 
     const dashboard = await request("/api/dashboard", { cookie: sessionCookie });
     const data = await dashboard.json() as {
-      stats: { totalUsers: number; activeUsers: number; totalActivities: number };
+      stats: { totalUsers: number; activeUsers: number; totalActivities: number; registrationsThisMonth: number };
+      charts: {
+        growth: { month: string; count: number }[];
+        roles: { role: string; count: number }[];
+        status: { status: string; count: number }[];
+      };
       activities: { action: string }[];
     };
-    expect(data.stats).toMatchObject({ totalUsers: 2, activeUsers: 2, totalActivities: 3 });
+    expect(data.stats).toMatchObject({
+      totalUsers: 2,
+      activeUsers: 2,
+      totalActivities: 3,
+      registrationsThisMonth: 2,
+    });
+    expect(data.charts.roles).toEqual(expect.arrayContaining([
+      { role: "admin", count: 1 },
+      { role: "editor", count: 1 },
+    ]));
+    expect(data.charts.status).toEqual([
+      { status: "active", count: 2 },
+      { status: "inactive", count: 0 },
+      { status: "pending", count: 0 },
+    ]);
+    expect(data.charts.growth.find((month) => month.month === new Date().toISOString().slice(0, 7))).toEqual({
+      month: new Date().toISOString().slice(0, 7),
+      count: 2,
+    });
     expect(data.activities.map((activity) => activity.action)).toEqual(["update", "registration", "admin_login"]);
 
     expect((await request(`/api/users/${created.body.record?.id}`, {
